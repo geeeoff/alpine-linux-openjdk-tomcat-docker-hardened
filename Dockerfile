@@ -29,7 +29,6 @@ WORKDIR $CATALINA_HOME
 
 # install JRE
 RUN set -x \
-#    && apk update \
     && apk add \
         --no-cache \
         --progress \
