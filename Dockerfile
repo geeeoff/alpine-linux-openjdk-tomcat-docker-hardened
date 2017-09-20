@@ -2,31 +2,28 @@ ARG alpineLinuxVersion=3.6
 
 FROM alpine:${alpineLinuxVersion} AS alpine-linux
 
+ENV CATALINA_HOME /usr/local/tomcat
+ENV PATH $PATH:$CATALINA_HOME/bin
+
+ARG tempTomcatNativeDir=/tmp/tomcat-native
+
 ARG alpineLinuxVersion
-ARG alpineOpenJdkVersion=8.131.11-r2
+ARG alpineOpenJdkMajorVersion=8
+ENV JAVA_HOME /usr/lib/jvm/java-1.${alpineOpenJdkMajorVersion}-openjdk/jre
+ENV PATH $PATH:$JAVA_HOME/bin
+
+ARG alpineOpenJdkMinorVersion=131
+ARG alpineOpenJdkPatchVersion=11-r2
+ARG alpineOpenJdkVersion=${alpineOpenJdkMajorVersion}.${alpineOpenJdkMinorVersion}.${alpineOpenJdkPatchVersion}
+
 ARG tomcatMajorVersion=8
 ARG tomcatMinorVersion=5
 ARG tomcatPatchVersion=20
 ARG tomcatVersion=${tomcatMajorVersion}.${tomcatMinorVersion}.${tomcatPatchVersion}
-
-#ENV ALPINE_JAVA_VERSION ${alpineOpenJdkVersion}
-ENV CATALINA_HOME /usr/local/tomcat
-ENV PATH $PATH:$CATALINA_HOME/bin
-#ENV TOMCAT_MAJOR_VERSION 8
-#ENV TOMCAT_MINOR_VERSION 5
-#ENV TOMCAT_PATCH_VERSION 20
-#ENV TOMCAT_VERSION $TOMCAT_MAJOR_VERSION.$TOMCAT_MINOR_VERSION.$TOMCAT_PATCH_VERSION
-#ENV TOMCAT_VERSION ${tomcatVersion}
-
 ARG tomcatFilename=apache-tomcat-${tomcatVersion}.tar.gz
 ARG tomcatDownloadUrl=http://apache.org/dist/tomcat/tomcat-${tomcatMajorVersion}/v${tomcatVersion}/bin/${tomcatFilename}
 ARG tomcatNativeLibDir=$CATALINA_HOME/native-jni-lib
-
-ARG tempTomcatNativeDir=/tmp/tomcat-native
-
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${tomcatNativeLibDir}
-ENV JAVA_HOME /usr/lib/jvm/java-1.8-openjdk/jre
-ENV PATH $PATH:$JAVA_HOME/bin
 
 WORKDIR $CATALINA_HOME
 
@@ -36,7 +33,7 @@ RUN set -x \
     && apk add \
         --no-cache \
         --progress \
-            openjdk8-jre="${alpineOpenJdkVersion}" \
+            openjdk${alpineOpenJdkMajorVersion}-jre="${alpineOpenJdkVersion}" \
 # install Tomcat
 #RUN set -x \
     && mkdir -p "$CATALINA_HOME" \
@@ -58,7 +55,7 @@ RUN set -x \
             libc-dev \
             make \
             openssl-dev \
-            openjdk8="${alpineOpenJdkVersion}" \
+            openjdk${alpineOpenJdkMajorVersion}="${alpineOpenJdkVersion}" \
 #RUN set -x \
     && ( \
        cd ${tempTomcatNativeDir}/native \
@@ -68,7 +65,7 @@ RUN set -x \
             --libdir="${tomcatNativeLibDir}" \
             --prefix="$CATALINA_HOME" \
             --with-apr="$(which apr-1-config)" \
-            --with-java-home=/usr/lib/jvm/java-1.8-openjdk \
+            --with-java-home=/usr/lib/jvm/java-1.${alpineOpenJdkMajorVersion}-openjdk \
             --with-ssl=yes \
        && make -j "$(nproc)" \
        && make install \
