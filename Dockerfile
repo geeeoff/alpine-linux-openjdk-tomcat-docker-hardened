@@ -35,10 +35,8 @@ RUN set -x \
         --progress \
             openjdk${alpineOpenJdkMajorVersion}-jre="${alpineOpenJdkVersion}" \
 # install Tomcat
-#RUN set -x \
     && mkdir -p "$CATALINA_HOME" \
     && mkdir -p ${tempTomcatNativeDir} \
-#RUN set -x \
     && wget \
         "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
@@ -46,7 +44,6 @@ RUN set -x \
     && rm -f $TOMCAT_FILE_NAME \
     && rm -f bin/tomcat-native.tar.gz \
 # compile & install Tomcat Native
-#RUN set -x \
     && apk add --no-cache --progress --virtual .native-build-deps \
             apr-dev \
             coreutils \
@@ -56,7 +53,6 @@ RUN set -x \
             make \
             openssl-dev \
             openjdk${alpineOpenJdkMajorVersion}="${alpineOpenJdkVersion}" \
-#RUN set -x \
     && ( \
        cd ${tempTomcatNativeDir}/native \
        && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
@@ -78,8 +74,7 @@ RUN set -x \
             | sort -u \
     )" \
     && apk add --virtual .tomcat-native-rundeps $runDeps \
-# clean up ...    
-#RUN set -x \
+# clean up ...
     && apk del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir}
     
