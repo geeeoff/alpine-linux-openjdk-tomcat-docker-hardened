@@ -79,12 +79,13 @@ RUN set -x \
 	&& mkdir -p $CATALINA_HOME/ssl \
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat
-	&& 
+	&& addgroup tomcat \
+    && adduser -h /usr/local/tomcat -s /sbin/nologin -G tomcat -D -g "dockerfile-created-tomcat-user" tomcat \
 # clean up ...
     && apk del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir}
 
 ADD server.xml /usr/local/tomcat/conf
-    
+USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
