@@ -5,6 +5,7 @@ FROM alpine:${alpineLinuxVersion} AS alpine-linux
 ENV CATALINA_HOME /usr/local/tomcat
 ENV PATH $PATH:$CATALINA_HOME/bin
 
+ARG sslCertCommonName=xyz
 ARG tempTomcatNativeDir=/tmp/tomcat-native
 
 ARG alpineLinuxVersion
@@ -33,6 +34,7 @@ RUN set -x \
         --no-cache \
         --progress \
             openjdk${alpineOpenJdkMajorVersion}-jre="${alpineOpenJdkVersion}" \
+            openssl \
 # install Tomcat
     && mkdir -p "$CATALINA_HOME" \
     && mkdir -p ${tempTomcatNativeDir} \
@@ -73,9 +75,16 @@ RUN set -x \
             | sort -u \
     )" \
     && apk add --virtual .tomcat-native-rundeps $runDeps \
+# enable SSL
+	&& mkdir -p $CATALINA_HOME/ssl \
+	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
+# harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat
+	&& 
 # clean up ...
     && apk del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir}
+
+ADD server.xml /usr/local/tomcat/conf
     
-EXPOSE 8080
+EXPOSE 8443
 CMD ["catalina.sh", "run"]
