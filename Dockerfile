@@ -34,16 +34,31 @@ RUN set -x \
         --no-cache \
         --progress \
             openjdk${alpineOpenJdkMajorVersion}-jre="${alpineOpenJdkVersion}" \
-            openssl \
+#            openssl \
 # install Tomcat
     && mkdir -p "$CATALINA_HOME" \
+    && addgroup tomcat \
+    && adduser -h $CATALINA_HOME -s /bin/sh -G tomcat -D -g "dockerfile-created-tomcat-user" tomcat \
+    && chown tomcat:tomcat $CATALINA_HOME \
     && mkdir -p ${tempTomcatNativeDir} \
+    && chown tomcat:tomcat ${tempTomcatNativeDir}  
+
+USER tomcat
+
+RUN set -x \
+    && mkdir -p "$CATALINA_HOME/ssl" \
     && wget \
         "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
     && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1 \
     && rm -f $TOMCAT_FILE_NAME \
-    && rm -f bin/tomcat-native.tar.gz \
+    && rm -f bin/tomcat-native.tar.gz
+    
+USER root
+
+ADD server.xml $CATALINA_HOME/conf
+
+RUN set -x \
 # compile & install Tomcat Native
     && apk add --no-cache --progress --virtual .native-build-deps \
             apr-dev \
@@ -52,6 +67,7 @@ RUN set -x \
             gcc \
             libc-dev \
             make \
+            openssl \
             openssl-dev \
             openjdk${alpineOpenJdkMajorVersion}="${alpineOpenJdkVersion}" \
     && ( \
@@ -76,16 +92,16 @@ RUN set -x \
     )" \
     && apk add --virtual .tomcat-native-rundeps $runDeps \
 # enable SSL
-	&& mkdir -p $CATALINA_HOME/ssl \
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
-# harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat
-	&& addgroup tomcat \
-    && adduser -h /usr/local/tomcat -s /sbin/nologin -G tomcat -D -g "dockerfile-created-tomcat-user" tomcat \
+# harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
+    && chmod -R 400 $CATALINA_HOME/conf \
+    && chmod 300 $CATALINA_HOME/logs \
+    && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
     && apk del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir}
 
-ADD server.xml /usr/local/tomcat/conf
+
 USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
