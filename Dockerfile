@@ -47,13 +47,14 @@ USER tomcat
 
 RUN set -x \
     && mkdir -p "$CATALINA_HOME/ssl" \
+    && mkdir -p "$CATALINA_HOME/logs" \
     && wget \
         "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
     && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1 \
     && rm -f $TOMCAT_FILE_NAME \
     && rm -f bin/tomcat-native.tar.gz
-    
+
 USER root
 
 ADD server.xml $CATALINA_HOME/conf
@@ -94,8 +95,9 @@ RUN set -x \
 # enable SSL
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
-    && chmod -R 400 $CATALINA_HOME/conf \
-    && chmod 300 $CATALINA_HOME/logs \
+     && chown tomcat:tomcat $CATALINA_HOME/conf/server.xml \
+     && chmod -R 400 $CATALINA_HOME/conf/* \
+#    && chmod 300 $CATALINA_HOME/logs/* \
     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
     && apk del --purge .native-build-deps \
