@@ -24,10 +24,6 @@
   <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
   <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
 
-  <GlobalNamingResources>
-    
-  </GlobalNamingResources>
-
   <Service name="Catalina">
     
     <Connector
