@@ -5,6 +5,10 @@
 set -x
 set -e
 
+# add a known good user
+adduser -D -s /bin/sh -u 1000 user
+sed -i -r 's/^user:!:/user:x:/' /etc/shadow
+
 # Remove existing crontabs, if any.
 rm -fr /var/spool/cron
 rm -fr /etc/crontabs
@@ -22,11 +26,11 @@ find / -xdev -type d -perm +0002 -exec chmod o-w {} +
 find / -xdev -type f -perm +0002 -exec chmod o-w {} +
 
 # Remove unnecessary user accounts.
-sed -i -r '/^(tomcat|root)/!d' /etc/group
-sed -i -r '/^(tomcat|root)/!d' /etc/passwd
+sed -i -r '/^(user|root)/!d' /etc/group
+sed -i -r '/^(user|root)/!d' /etc/passwd
 
 # Remove interactive login shell for everybody but user.
-sed -i -r '/^tomcat:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
+sed -i -r '/^user:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
 
 sysdirs="
   /bin
@@ -66,19 +70,19 @@ find $sysdirs -xdev \( \
   \) -delete
 
 # Remove init scripts since we do not use them.
-rm -fr /etc/init.d
-rm -fr /lib/rc
-rm -fr /etc/conf.d
-rm -fr /etc/inittab
-rm -fr /etc/runlevels
-rm -fr /etc/rc.conf
+rm -rf /etc/init.d
+rm -rf /lib/rc
+rm -rf /etc/conf.d
+rm -rf /etc/inittab
+rm -rf /etc/runlevels
+rm -rf /etc/rc.conf
 
 # Remove kernel tunables since we do not need them.
-rm -fr /etc/sysctl*
-rm -fr /etc/modprobe.d
-rm -fr /etc/modules
-rm -fr /etc/mdev.conf
-rm -fr /etc/acpi
+rm -rf /etc/sysctl*
+rm -rf /etc/modprobe.d
+rm -rf /etc/modules
+rm -rf /etc/mdev.conf
+rm -rf /etc/acpi
 
 # Remove root homedir since we do not need it.
 rm -fr /root
