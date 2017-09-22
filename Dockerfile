@@ -52,9 +52,7 @@ RUN set -x \
     && wget \
         "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
-    && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1 \
-    && rm -f $TOMCAT_FILE_NAME \
-    && rm -f bin/tomcat-native.tar.gz
+    && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1
 
 USER root
 
@@ -103,9 +101,11 @@ RUN set -x \
     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
     && apk del --purge .native-build-deps \
-    && rm -rf ${tempTomcatNativeDir}
+    && rm -rf ${tempTomcatNativeDir} \
+    && rm -f ${tomcatFilename} \
+    && rm -f bin/tomcat-native.tar.gz
 
 
-USER tomcat
+#USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
