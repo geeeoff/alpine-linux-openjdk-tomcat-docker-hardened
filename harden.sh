@@ -1,4 +1,6 @@
 #!/bin/sh
+# harden Alpine
+# credit ... adapted from: https://gist.github.com/kost/017e95aa24f454f77a37
 
 set -x
 set -e
