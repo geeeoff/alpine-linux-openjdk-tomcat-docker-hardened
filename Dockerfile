@@ -97,6 +97,7 @@ RUN set -x \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
     && chown tomcat:tomcat $CATALINA_HOME/conf/server.xml \
     && chown tomcat:tomcat $CATALINA_HOME/conf/web.xml \
+    && chmod 400 $CATALINA_HOME/* \
     && chmod -R 400 $CATALINA_HOME/conf/* \
     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
