@@ -181,6 +181,6 @@ RUN set -x \
 	&& sed -i -r '/^tomcat:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
     
 
-#USER tomcat
+USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
