@@ -2,7 +2,7 @@ ARG alpineLinuxVersion=3.6
 
 FROM alpine:${alpineLinuxVersion} AS alpine-linux
 
-ENV CATALINA_HOME /usr/local/tomcat
+ENV CATALINA_HOME /home/tomcat
 ENV CATALINA_OPTS -Dorg.apache.catalina.connector.RECYCLE_FACADES=true:$CATALINA_OPTS
 ENV PATH $PATH:$CATALINA_HOME/bin
 
