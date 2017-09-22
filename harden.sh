@@ -24,7 +24,7 @@ sed -i -r '/^(tomcat|root)/!d' /etc/group
 sed -i -r '/^(tomcat|root)/!d' /etc/passwd
 
 # Remove interactive login shell for everybody but user.
-#sed -i -r '/^user:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
+sed -i -r '/^tomcat:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
 
 sysdirs="
   /bin
