@@ -45,7 +45,8 @@
            SSLCertificateFile="ssl/server.crt"
            SSLCertificateKeyFile="ssl/server.pem"
            SSLVerifyClient="optional" 
-           sslEnabledProtocols="TLSv1,TLSv1.1,TLSv1.2"/>
+           sslEnabledProtocols="TLSv1,TLSv1.1,TLSv1.2"
+           clientAuth="false"/>
 
     <Engine name="Catalina" defaultHost="localhost">
 
