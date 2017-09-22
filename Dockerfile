@@ -123,7 +123,7 @@ RUN set -x \
     && find / -xdev -type f -perm +0002 -exec chmod o-w {} + \
     # Remove unnecessary user accounts.
     && sed -i -r '/^(tomcat|root)/!d' /etc/group \
-    && sed -i -r '/^(tomcat|root)/!d' /etc/passwd
+    && sed -i -r '/^(tomcat|root)/!d' /etc/passwd \
     && sysdirs=" \
  		/bin \
   		/etc \
@@ -132,7 +132,16 @@ RUN set -x \
   		/usr \
 	" \
 # Remove apk configs.
-	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} +
+	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} + \
+# Remove crufty...
+#   /etc/shadow-
+#   /etc/passwd-
+#   /etc/group-
+	&& find $sysdirs -xdev -type f -regex '.*-$' -exec rm -f {} + \
+# Ensure system dirs are owned by root and not writable by anybody else.
+	&& find $sysdirs -xdev -type d \
+  		-exec chown root:root {} \; \
+  		-exec chmod 0755 {} \;
     
 
 #USER tomcat
