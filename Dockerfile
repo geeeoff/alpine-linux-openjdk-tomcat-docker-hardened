@@ -59,6 +59,7 @@ RUN set -x \
 USER root
 
 ADD server.xml $CATALINA_HOME/conf
+ADD web.xml $CATALINA_HOME/conf
 
 RUN set -x \
 # compile & install Tomcat Native
@@ -97,12 +98,13 @@ RUN set -x \
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
      && chown tomcat:tomcat $CATALINA_HOME/conf/server.xml \
+     && chown tomcat:tomcat $CATALINA_HOME/conf/web.xml \
      && chmod -R 400 $CATALINA_HOME/conf/* \
 #    && chmod 300 $CATALINA_HOME/logs/* \
-    && rm -rf $CATALINA_HOME/webapps/* \
+     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
-    && apk del --purge .native-build-deps \
-    && rm -rf ${tempTomcatNativeDir}
+     && apk del --purge .native-build-deps \
+     && rm -rf ${tempTomcatNativeDir}
 
 
 USER tomcat
