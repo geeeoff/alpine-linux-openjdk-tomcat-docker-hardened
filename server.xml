@@ -68,7 +68,7 @@
       </Realm>
 
       <Host name="localhost"  appBase="webapps"
-            unpackWARs="true" autoDeploy="true">
+            unpackWARs="false" autoDeploy="false" deployOnStartup="false">
 
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
                prefix="localhost_access_log" suffix=".txt"
