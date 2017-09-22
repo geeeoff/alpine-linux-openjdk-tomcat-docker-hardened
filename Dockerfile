@@ -107,11 +107,32 @@ RUN set -x \
     && rm -f $CATALINA_HOME/RUNNING.txt \
     && rm -f bin/tomcat-native.tar.gz \
 # harden Alpine
-# credit: https://gist.github.com/kost/017e95aa24f454f77a37
+# credit ... adapted from: https://gist.github.com/kost/017e95aa24f454f77a37
+# Remove existing crontabs, if any.
     && rm -rf /var/spool/cron \
     && rm -rf /etc/crontabs \
     && rm -rf /etc/periodic \
-    && find /sbin /usr/sbin ! -type d -a ! -name login_duo  -a ! -name nologin -a ! -name setup-proxy -a ! -name sshd -a ! -name start.sh -delete
+# Remove all but a handful of admin commands.
+    && find /sbin /usr/sbin ! -type d \
+    	-a ! -name nologin \
+    	-delete \
+# Remove world-writable permissions.
+# This breaks apps that need to write to /tmp,
+# such as ssh-agent.
+    && find / -xdev -type d -perm +0002 -exec chmod o-w {} + \
+    && find / -xdev -type f -perm +0002 -exec chmod o-w {} + \
+    # Remove unnecessary user accounts.
+    && sed -i -r '/^(tomcat|root)/!d' /etc/group \
+    && sed -i -r '/^(tomcat|root)/!d' /etc/passwd
+    && sysdirs=" \
+ 		/bin \
+  		/etc \
+  		/lib \
+  		/sbin \
+  		/usr \
+	" \
+# Remove apk configs.
+	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} +
     
 
 #USER tomcat
