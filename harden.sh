@@ -14,24 +14,24 @@ set -e
 #    lxc-start: Additional information can be obtained by \
 #        setting the --logfile and --logpriority options.
 
-adduser -D -s /bin/sh -u 1000 user
-sed -i -r 's/^user:!:/user:x:/' /etc/shadow
+#adduser -D -s /bin/sh -u 1000 user
+#sed -i -r 's/^user:!:/user:x:/' /etc/shadow
 
 # Avoid error `Only root may specify -c or -f` when using
 # ForceCommand with `-f` option at non-root ssh login.
 # https://www.duosecurity.com/docs/duounix-faq#can-i-use-login_duo-to-protect-non-root-shared-accounts,-or-can-i-do-an-install-without-root-privileges?
-chmod u-s /usr/sbin/login_duo
+#chmod u-s /usr/sbin/login_duo
 
 # /etc/duo/login_duo.conf must be readable only by user 'user'.
-chown user:user /etc/duo/login_duo.conf
-chmod 0400 /etc/duo/login_duo.conf
+#chown user:user /etc/duo/login_duo.conf
+#chmod 0400 /etc/duo/login_duo.conf
 
 # Ensure strict ownership and perms.
-chown root:root /usr/bin/github_pubkeys
-chmod 0555 /usr/bin/github_pubkeys
+#chown root:root /usr/bin/github_pubkeys
+#chmod 0555 /usr/bin/github_pubkeys
 
 # Be informative after successful login.
-echo -e "\n\nApp container image built on $(date)." > /etc/motd
+#echo -e "\n\nApp container image built on $(date)." > /etc/motd
 
 # Improve strength of diffie-hellman-group-exchange-sha256 (Custom DH with SHA2).
 # See https://stribika.github.io/2015/01/04/secure-secure-shell.html
@@ -40,12 +40,12 @@ echo -e "\n\nApp container image built on $(date)." > /etc/motd
 # Time Type Tests Tries Size Generator Modulus
 #
 # This file is provided by the openssh package on Fedora.
-moduli=/etc/ssh/moduli
-if [[ -f ${moduli} ]]; then
-  cp ${moduli} ${moduli}.orig
-  awk '$5 >= 2000' ${moduli}.orig > ${moduli}
-  rm -f ${moduli}.orig
-fi
+#moduli=/etc/ssh/moduli
+#if [[ -f ${moduli} ]]; then
+#  cp ${moduli} ${moduli}.orig
+#  awk '$5 >= 2000' ${moduli}.orig > ${moduli}
+#  rm -f ${moduli}.orig
+#fi
 
 # Remove existing crontabs, if any.
 rm -fr /var/spool/cron
