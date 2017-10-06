@@ -70,7 +70,8 @@ RUN set -x \
             --build="$gnuArch" \
             --prefix="$CATALINA_HOME" \
             --with-apr="$(which apr-1-config)" \
-            --with-java-home=/usr/lib/jvm/java-1.8-openjdk \
+            --with-java-home=/usr/lib/jvm/java-1.8-openjdk/jre \
+            --with-os-type=../include/linux \
             --with-ssl=yes \
        && make -j "$(nproc)" \
        && make install \
