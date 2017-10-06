@@ -20,6 +20,16 @@ ADD apk-tools-static-2.7.2-r0-x86_64.apk /apk-tools-static-2.7.2-r0-x86_64.apk
 
 # install wget and other stuff needed to compile tomcat native
 RUN set -x \
+	&& /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static \
+                    -X http://dl-cdn.alpinelinux.org/alpine/v3.6/community \
+                    -X http://dl-cdn.alpinelinux.org/alpine/v3.6/main  \
+                    -U \
+                    add \
+                    --allow-untrusted  \
+                    --initdb  \
+                    --progress \
+                    --no-cache \
+            		openjdk8=8.131.11-r2 \
     && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static \
                     -X http://dl-cdn.alpinelinux.org/alpine/v3.6/community \
                     -X http://dl-cdn.alpinelinux.org/alpine/v3.6/main  \
@@ -38,8 +48,7 @@ RUN set -x \
             		libc-dev \
             		make \
             		openssl \
-            		openssl-dev \
-            		openjdk8=8.131.11-r2 \
+                    openssl-dev \
 # do some pre-setup for Tomcat here ...
     && mkdir -p "$CATALINA_HOME" "$CATALINA_HOME"/logs "$CATALINA_HOME"/ssl ${tempTomcatNativeDir} \
     && addgroup tomcat \
@@ -48,14 +57,14 @@ RUN set -x \
 
 WORKDIR $CATALINA_HOME
 
-USER tomcat
+#USER tomcat
 
 RUN set -x \
     && wget "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
     && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1
 
-USER root
+#USER root
 
 ADD server.xml $CATALINA_HOME/conf
 ADD web.xml $CATALINA_HOME/conf
@@ -81,16 +90,18 @@ RUN set -x \
         scanelf --needed --nobanner --recursive "${tomcatNativeLibDir}" \
             | awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
             | sort -u \
-            | xargs -r apk info --installed \
+            | xargs -r /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static info --installed \
             | sort -u \
     )" \
-    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static add --virtual .tomcat-native-rundeps $runDeps \
+    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static add  --no-cache --progress --virtual .tomcat-native-rundeps $runDeps \
 # enable SSL
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
-    && chown tomcat:tomcat $CATALINA_HOME/conf/server.xml \
+    && chown -h tomcat:tomcat $CATALINA_HOME/conf/server.xml \
     				       $CATALINA_HOME/conf/web.xml \
     				       $CATALINA_HOME/conf/logging.properties \
+    				       ${tomcatNativeLibDir} \
+    				       ${tomcatNativeLibDir}/* \
     && chmod 400 $CATALINA_HOME/LICENSE $CATALINA_HOME/NOTICE \
     && chmod -R 400 $CATALINA_HOME/conf/* \
     && chmod 500 $CATALINA_HOME/bin $CATALINA_HOME/conf $CATALINA_HOME/ssl $CATALINA_HOME/lib \
@@ -106,8 +117,8 @@ RUN set -x \
     && rm -f $CATALINA_HOME/RUNNING.txt \
     && rm -f bin/tomcat-native.tar.gz \
 # clean up after using APK ...
-#    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps
+    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps
 
-USER tomcat
+#USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
