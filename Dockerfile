@@ -11,7 +11,7 @@ ENV tomcatPatchVersion=20
 ENV tomcatVersion=${tomcatMajorVersion}.${tomcatMinorVersion}.${tomcatPatchVersion}
 ENV tomcatFilename=apache-tomcat-${tomcatVersion}.tar.gz
 ENV tomcatDownloadUrl=http://archive.apache.org/dist/tomcat/tomcat-${tomcatMajorVersion}/v${tomcatVersion}/bin/${tomcatFilename}
-ENV tomcatNativeLibDir=$CATALINA_HOME/lib
+ENV tomcatNativeLibDir=$CATALINA_HOME/native-jni-lib
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${tomcatNativeLibDir}
 
 # since image is hardened, we don't have APK
@@ -69,6 +69,7 @@ RUN set -x \
        && ./configure \
             --build="$gnuArch" \
             --prefix="$CATALINA_HOME" \
+            --libdir=${tomcatNativeLibDir} \
             --with-apr="$(which apr-1-config)" \
             --with-java-home=/usr/lib/jvm/java-1.8-openjdk/jre \
             --with-os-type=../include/linux \
