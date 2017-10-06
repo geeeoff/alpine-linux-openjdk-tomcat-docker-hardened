@@ -1,46 +1,52 @@
-ARG alpineLinuxVersion=3.6
-
-FROM alpine:${alpineLinuxVersion} AS alpine-linux
+FROM gyaworski/alpine-linux-openjdk-hardened:alpine-3.6-openjdk-8.131.11-r2-hardened-1.0
 
 ENV CATALINA_HOME /home/tomcat
 ENV CATALINA_OPTS -Dorg.apache.catalina.connector.RECYCLE_FACADES=true:$CATALINA_OPTS
 ENV PATH $PATH:$CATALINA_HOME/bin
-
-ARG sslCertCommonName=xyz
-ARG tempTomcatNativeDir=/tmp/tomcat-native
-
-ARG alpineLinuxVersion
-ARG alpineOpenJdkMajorVersion=8
-ENV JAVA_HOME /usr/lib/jvm/java-1.${alpineOpenJdkMajorVersion}-openjdk/jre
-ENV PATH $PATH:$JAVA_HOME/bin
-
-ARG alpineOpenJdkMinorVersion=131
-ARG alpineOpenJdkPatchVersion=11-r2
-ARG alpineOpenJdkVersion=${alpineOpenJdkMajorVersion}.${alpineOpenJdkMinorVersion}.${alpineOpenJdkPatchVersion}
-
-ARG tomcatMajorVersion=8
-ARG tomcatMinorVersion=5
-ARG tomcatPatchVersion=20
-ARG tomcatVersion=${tomcatMajorVersion}.${tomcatMinorVersion}.${tomcatPatchVersion}
-ARG tomcatFilename=apache-tomcat-${tomcatVersion}.tar.gz
-ARG tomcatDownloadUrl=http://apache.org/dist/tomcat/tomcat-${tomcatMajorVersion}/v${tomcatVersion}/bin/${tomcatFilename}
-ARG tomcatNativeLibDir=$CATALINA_HOME/native-jni-lib
+ENV sslCertCommonName=xyz
+ENV tempTomcatNativeDir=/tmp/tomcat-native
+ENV tomcatMajorVersion=8
+ENV tomcatMinorVersion=5
+ENV tomcatPatchVersion=20
+ENV tomcatVersion=${tomcatMajorVersion}.${tomcatMinorVersion}.${tomcatPatchVersion}
+ENV tomcatFilename=apache-tomcat-${tomcatVersion}.tar.gz
+ENV tomcatDownloadUrl=http://archive.apache.org/dist/tomcat/tomcat-${tomcatMajorVersion}/v${tomcatVersion}/bin/${tomcatFilename}
+ENV tomcatNativeLibDir=$CATALINA_HOME/native-jni-lib
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${tomcatNativeLibDir}
 
-WORKDIR $CATALINA_HOME
+# since image is hardened, we don't have APK
+# run it from a static binary
+ADD apk-tools-static-2.7.2-r0-x86_64.apk ./apk-tools-static-2.7.2-r0-x86_64.apk
 
-# install JRE
+# install wget and other stuff needed to compile tomcat native
 RUN set -x \
-    && apk add \
-        --no-cache \
-        --progress \
-            openjdk${alpineOpenJdkMajorVersion}-jre="${alpineOpenJdkVersion}" \
-#            openssl \
-# install Tomcat
+    && ./apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static \
+                    -X http://dl-cdn.alpinelinux.org/alpine/v3.6/community \
+                    -X http://dl-cdn.alpinelinux.org/alpine/v3.6/main  \
+                    -U \
+                    add \
+                    --allow-untrusted  \
+                    --initdb  \
+                    --progress \
+                    --no-cache \
+                    --virtual .native-build-deps \
+                    wget \
+                    apr-dev \
+            		coreutils \
+            		dpkg-dev dpkg \
+            		gcc \
+            		libc-dev \
+            		make \
+            		openssl \
+            		openssl-dev \
+            		openjdk8=8.131.11-r2 \
+# do some pre-setup for Tomcat here ...
     && mkdir -p "$CATALINA_HOME" "$CATALINA_HOME"/logs "$CATALINA_HOME"/ssl ${tempTomcatNativeDir} \
     && addgroup tomcat \
     && adduser -h $CATALINA_HOME -s /bin/sh -G tomcat -D -g "dockerfile-created-tomcat-user" tomcat \
-    && chown tomcat:tomcat $CATALINA_HOME "$CATALINA_HOME"/logs "$CATALINA_HOME"/ssl ${tempTomcatNativeDir}
+    && chown tomcat:tomcat $CATALINA_HOME "$CATALINA_HOME"/logs "$CATALINA_HOME"/ssl ${tempTomcatNativeDir}                   
+
+WORKDIR $CATALINA_HOME
 
 USER tomcat
 
@@ -56,17 +62,7 @@ ADD web.xml $CATALINA_HOME/conf
 ADD logging.properties $CATALINA_HOME/conf
 
 RUN set -x \
-# compile & install Tomcat Native
-    && apk add --no-cache --progress --virtual .native-build-deps \
-            apr-dev \
-            coreutils \
-            dpkg-dev dpkg \
-            gcc \
-            libc-dev \
-            make \
-            openssl \
-            openssl-dev \
-            openjdk${alpineOpenJdkMajorVersion}="${alpineOpenJdkVersion}" \
+# compile & install Tomcat Native APR libs
     && ( \
        cd ${tempTomcatNativeDir}/native \
        && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
@@ -75,7 +71,7 @@ RUN set -x \
             --libdir="${tomcatNativeLibDir}" \
             --prefix="$CATALINA_HOME" \
             --with-apr="$(which apr-1-config)" \
-            --with-java-home=/usr/lib/jvm/java-1.${alpineOpenJdkMajorVersion}-openjdk \
+            --with-java-home=$JAVA_HOME \
             --with-ssl=yes \
        && make -j "$(nproc)" \
        && make install \
@@ -103,83 +99,26 @@ RUN set -x \
                    $CATALINA_HOME/ssl/* \
     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
-    && apk del --purge .native-build-deps \
+    && ./apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir} \
     && rm -f ${tomcatFilename} \
     && rm -f $CATALINA_HOME/RELEASE-NOTES \
     && rm -f $CATALINA_HOME/RUNNING.txt \
     && rm -f bin/tomcat-native.tar.gz \
-# harden Alpine
-# credit ... adapted from: https://gist.github.com/kost/017e95aa24f454f77a37
-# Remove existing crontabs, if any.
-    && rm -rf /var/spool/cron \
-    && rm -rf /etc/crontabs \
-    && rm -rf /etc/periodic \
-# Remove all but a handful of admin commands.
-    && find /sbin /usr/sbin ! -type d \
-    	-a ! -name nologin \
-    	-delete \
-# Remove world-writable permissions.
-# This breaks apps that need to write to /tmp,
-# such as ssh-agent.
-    && find / -xdev -type d -perm +0002 -exec chmod o-w {} + \
-    && find / -xdev -type f -perm +0002 -exec chmod o-w {} + \
-    # Remove unnecessary user accounts.
-    && sed -i -r '/^(tomcat|root)/!d' /etc/group \
-    && sed -i -r '/^(tomcat|root)/!d' /etc/passwd \
+
+    
+# clean up the APK stuff
+RUN set -x \
+    && rm -rf ./apk-tools-static-2.7.2-r0-x86_64.apk \ 
+# Remove apk configs.
     && sysdirs=" \
- 		/bin \
+	  	/bin \
   		/etc \
   		/lib \
   		/sbin \
   		/usr \
 	" \
-# Remove apk configs.
-	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} + \
-# Remove crufty...
-#   /etc/shadow-
-#   /etc/passwd-
-#   /etc/group-
-	&& find $sysdirs -xdev -type f -regex '.*-$' -exec rm -f {} + \
-# Ensure system dirs are owned by root and not writable by anybody else.
-	&& find $sysdirs -xdev -type d \
-  		-exec chown root:root {} \; \
-  		-exec chmod 0755 {} \; \
-# Remove all suid files.
-	&& find $sysdirs -xdev -type f -a -perm +4000 -delete \
-# Remove other programs that could be dangerous.
-	&& find $sysdirs -xdev \( \
-  		-name hexdump -o \
-		-name chgrp -o \
-		-name chmod -o \
-		-name chown -o \
-		-name ln -o \
-		-name od -o \
-		-name strings -o \
-		-name su \
-		\) -delete \
-# Remove init scripts since we do not use them.
-	&& rm -fr /etc/init.d \
-	&& rm -fr /lib/rc \
-	&& rm -fr /etc/conf.d \
-	&& rm -fr /etc/inittab \
-	&& rm -fr /etc/runlevels \
-	&& rm -fr /etc/rc.conf \ 
-# Remove kernel tunables since we do not need them.
-	&& rm -fr /etc/sysctl* \
-	&& rm -fr /etc/modprobe.d \
-	&& rm -fr /etc/modules \
-	&& rm -fr /etc/mdev.conf \
-	&& rm -fr /etc/acpi \
-# Remove root homedir since we do not need it.
-	&& rm -fr /root \ 
-# Remove fstab since we do not need it.
-	&& rm -f /etc/fstab \
-# Remove broken symlinks (because we removed the targets above).
-	&& find $sysdirs -xdev -type l -exec test ! -e {} \; -delete \
-# Remove interactive login shell for everybody but the tomcat user.
-	&& sed -i -r '/^tomcat:/! s#^(.*):[^:]*$#\1:/sbin/nologin#' /etc/passwd
-    
+	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} +
 
 USER tomcat
 EXPOSE 8443
