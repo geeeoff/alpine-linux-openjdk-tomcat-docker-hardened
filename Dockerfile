@@ -57,14 +57,14 @@ RUN set -x \
 
 WORKDIR $CATALINA_HOME
 
-#USER tomcat
+USER tomcat
 
 RUN set -x \
     && wget "${tomcatDownloadUrl}" \
     && tar -xzf ${tomcatFilename} --strip-components=1 \
     && tar -xzf bin/tomcat-native.tar.gz -C ${tempTomcatNativeDir} --strip-components=1
 
-#USER root
+USER root
 
 ADD server.xml $CATALINA_HOME/conf
 ADD web.xml $CATALINA_HOME/conf
@@ -116,9 +116,11 @@ RUN set -x \
     && rm -f $CATALINA_HOME/RELEASE-NOTES \
     && rm -f $CATALINA_HOME/RUNNING.txt \
     && rm -f bin/tomcat-native.tar.gz \
+    && rm -rf $JAVA_HOME/../bin $JAVA_HOME/../include $JAVA_HOME/../lib \
 # clean up after using APK ...
-    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps
+    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps \
+    && rm -f /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static
 
-#USER tomcat
+USER tomcat
 EXPOSE 8443
 CMD ["catalina.sh", "run"]
