@@ -11,16 +11,16 @@ ENV tomcatPatchVersion=20
 ENV tomcatVersion=${tomcatMajorVersion}.${tomcatMinorVersion}.${tomcatPatchVersion}
 ENV tomcatFilename=apache-tomcat-${tomcatVersion}.tar.gz
 ENV tomcatDownloadUrl=http://archive.apache.org/dist/tomcat/tomcat-${tomcatMajorVersion}/v${tomcatVersion}/bin/${tomcatFilename}
-ENV tomcatNativeLibDir=$CATALINA_HOME/native-jni-lib
+ENV tomcatNativeLibDir=$CATALINA_HOME/lib
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${tomcatNativeLibDir}
 
 # since image is hardened, we don't have APK
 # run it from a static binary
-ADD apk-tools-static-2.7.2-r0-x86_64.apk ./apk-tools-static-2.7.2-r0-x86_64.apk
+ADD apk-tools-static-2.7.2-r0-x86_64.apk /apk-tools-static-2.7.2-r0-x86_64.apk
 
 # install wget and other stuff needed to compile tomcat native
 RUN set -x \
-    && ./apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static \
+    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static \
                     -X http://dl-cdn.alpinelinux.org/alpine/v3.6/community \
                     -X http://dl-cdn.alpinelinux.org/alpine/v3.6/main  \
                     -U \
@@ -68,10 +68,9 @@ RUN set -x \
        && gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
        && ./configure \
             --build="$gnuArch" \
-            --libdir="${tomcatNativeLibDir}" \
             --prefix="$CATALINA_HOME" \
             --with-apr="$(which apr-1-config)" \
-            --with-java-home=$JAVA_HOME \
+            --with-java-home=/usr/lib/jvm/java-1.8-openjdk \
             --with-ssl=yes \
        && make -j "$(nproc)" \
        && make install \
@@ -83,7 +82,7 @@ RUN set -x \
             | xargs -r apk info --installed \
             | sort -u \
     )" \
-    && apk add --virtual .tomcat-native-rundeps $runDeps \
+    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static add --virtual .tomcat-native-rundeps $runDeps \
 # enable SSL
 	&& openssl req -newkey rsa:2048 -x509 -keyout $CATALINA_HOME/ssl/server.pem -out $CATALINA_HOME/ssl/server.crt -nodes -subj '/CN=${sslCertCommonName}' \
 # harden Tomcat: https://www.owasp.org/index.php/Securing_tomcat	
@@ -95,30 +94,17 @@ RUN set -x \
     && chmod 500 $CATALINA_HOME/bin $CATALINA_HOME/conf $CATALINA_HOME/ssl $CATALINA_HOME/lib \
     && chmod 300 $CATALINA_HOME/logs \
     && chmod -w $CATALINA_HOME \
-    && chmod -w -R $CATALINA_HOME/bin/* $CATALINA_HOME/include/* $CATALINA_HOME/lib/* $CATALINA_HOME/native-jni-lib/* \
+    && chmod -w -R $CATALINA_HOME/bin/* $CATALINA_HOME/include/* $CATALINA_HOME/lib/* \
                    $CATALINA_HOME/ssl/* \
     && rm -rf $CATALINA_HOME/webapps/* \
 # clean up ...
-    && ./apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps \
     && rm -rf ${tempTomcatNativeDir} \
     && rm -f ${tomcatFilename} \
     && rm -f $CATALINA_HOME/RELEASE-NOTES \
     && rm -f $CATALINA_HOME/RUNNING.txt \
     && rm -f bin/tomcat-native.tar.gz \
-
-    
-# clean up the APK stuff
-RUN set -x \
-    && rm -rf ./apk-tools-static-2.7.2-r0-x86_64.apk \ 
-# Remove apk configs.
-    && sysdirs=" \
-	  	/bin \
-  		/etc \
-  		/lib \
-  		/sbin \
-  		/usr \
-	" \
-	&& find $sysdirs -xdev -regex '.*apk.*' -exec rm -fr {} +
+# clean up after using APK ...
+#    && /apk-tools-static-2.7.2-r0-x86_64.apk/sbin/apk.static del --purge .native-build-deps
 
 USER tomcat
 EXPOSE 8443
